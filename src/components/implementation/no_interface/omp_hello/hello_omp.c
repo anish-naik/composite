@@ -2,31 +2,13 @@
 #include <omp.h>
 
 /******************************************************************************/
+void my_fn(int id);
+//global variables
+float m1[60][100]; //60X100
+float m2[100][50]; //100X50
+float final[60][50];
 
 int main ( void )
-
-/******************************************************************************/
-/*
-  Purpose:
-
-    HELLO has each thread print out its ID.
-
-  Discussion:
-
-    HELLO is a "Hello, World" program for OpenMP.
-
-  Licensing:
-
-    This code is distributed under the GNU LGPL license. 
-
-  Modified:
-
-    23 June 2010
-
-  Author:
-
-    John Burkardt
-*/
 {
   int id;
   double wtime;
@@ -46,31 +28,32 @@ int main ( void )
   PRINTC ( "\n" );
 
   id = omp_get_thread_num ( );
-  PRINTC ( "  HELLO from process %d\n", id ) ;
-
+  PRINTC ( "  HELLO FROM PROCESS %d\n", id);
+          int i, j, M, K, N;
+        M = 60;
+        K = 50;
+        N = 100;
+        for(i = 0; i < M; i++){
+                for(j = 0; j < N; j++){
+                        m1[i][j] = ((float)rand())/((float)RAND_MAX);
+                }
+        }
+        for(i = 0; i < N; i++){
+                for(j = 0; j < K; j++){
+                        m2[i][j] = ((float)rand())/((float)RAND_MAX);
+ 		}
+  	}
   PRINTC ( "\n" );
   PRINTC ( "  Going INSIDE the parallel region:\n" );
   PRINTC ( "\n" );
 /*
   INSIDE THE PARALLEL REGION, have each thread say hello.
 */
-#if 1
-#pragma omp parallel private(id)
-  {
-#pragma omp for
-  for (id = 0; id < 10; id++) 
-  {
-	  PRINTC("id:%u\n", id);
-  }
-  }
-#else
 # pragma omp parallel\
   private ( id )
   {
-    id = omp_get_thread_num ( );
-    PRINTC ("  Hello from process %d\n", id );
+    my_fn(id);
   }
-#endif
 /*
   Finish up by measuring the elapsed time.
 */
@@ -90,3 +73,23 @@ int main ( void )
 
   return 0;
 }
+
+void my_fn(int id){
+        int low = (60 * id)/NTHDS;
+        int high = (60 * (id+1))/NTHDS;
+        int i, j;
+        int sum;
+        for(i = 0; i < 50; i++){
+                if(low >= high){
+                        break;
+                }
+                sum = 0;
+                for(j = 0; j < 100; j++){
+                        sum += m1[low][j] * m2[j][i];
+                }
+                final[low][i] = sum;
+                low += 1;
+        }
+        return;
+}
+
