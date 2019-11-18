@@ -34,7 +34,7 @@ cos_init(void *d)
 	struct cos_compinfo *   ci   = cos_compinfo_get(defci);
 	int i;
 	static volatile unsigned long first = NUM_CPU + 1, init_done[NUM_CPU] = { 0 };
-	static unsigned b1 = 0, b2 = 0, b3 = 0;
+	static volatile b1 = 0, b2 = 0, b3 = 0;
 
 	PRINTC("In a FORK PROGRAM!\n");
 	if (ps_cas(&first, NUM_CPU + 1, cos_cpuid())) {
