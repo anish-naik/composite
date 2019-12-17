@@ -10,26 +10,20 @@
 #include <stdint.h>
 
 /******************************************************************************/
-void my_fn(int id);
 //global variables
-float m1[60][100]; //60X100
-float m2[100][50]; //100X50
-float final[60][50];
-
+float m1[600][1000]; //60X100
+float m2[1000][500]; //100X50
+float final[600][500];
 #define NTHDS NUM_CPU
-
+short CACHE_ALIGNED counter= 0;
+int CACHE_ALIGNED cpu[NUM_CPU] = {0};
 int main ( void )
 {
-	int i, j, M, K, N, id;
-	u64_t start, end;
-
-	PRINTC("HELLO_OPENMP\n");
-	PRINTC("Number of processors available is %d\n", omp_get_num_procs());
-	PRINTC("Number of threads is %d\n", omp_get_max_threads());
-
-    M = 60;
-    N = 100;
-    K = 50;
+	int i, j, M, K, N;
+	u64_t start_rt, end_rt;
+    M = 600;
+    N = 1000;
+    K = 500;
     for(i = 0; i < M; i++){
         for(j = 0; j < N; j++){
             m1[i][j] = ((float)rand())/((float)RAND_MAX);
@@ -40,49 +34,38 @@ int main ( void )
             m2[i][j] = ((float)rand())/((float)RAND_MAX);
  		}
   	}
-	PRINTC("Going INSIDE the parallel region:\n");
-	rdtscll(start);
-	/*
-  	INSIDE THE PARALLEL REGION, have each thread runs my_fn.
-	*/
-	# pragma omp parallel private ( id )
+	int m;
+	float sum;
+	rdtscll(start_rt);
+	# pragma omp parallel private(m)
 	{
-		id = omp_get_thread_num();
-		my_fn(id);
+	#pragma omp for 
+    	for(m=0; m < 600; m++){
+        	for(i = 0; i < 500; i++){
+	            sum = 0;
+	            for(j = 0; j < 1000; j++){
+	                sum += m1[m][j] * m2[j][i];
+	     	    }
+	            final[m][i] = sum;
+        	}
 	}
-	/*
-  	Finish up by measuring the elapsed time.
-	*/
-	rdtscll(end);
-	PRINTC ( "  Back OUTSIDE the parallel region.\n" );
-	/*
-	Terminate.
-	*/
-    // int x, y;
-    // for(x = 0; x < M; x++){
-    //     for(y = 0; y < K; y++){
-    //         PRINTC("%d, %d, %f\n", x, y, final[x][y]);
-    //     }
-    // }
-	PRINTC("diff is %lld\n", end-start);
-	return 0;
+	int c = ps_faa(&counter, 1);
+        cpu[c] = cos_cpuid();
+	}
+	rdtscll(end_rt);
+	/*int x, y;
+	for(x=0; x<60; x++){
+		for(y=0; y<50; y++){
+			PRINTC("%f\n", final[x][y]);
+		}
+	}*/
+	assert(counter == NUM_CPU);
+        int bmp = 0;
+        int d;
+        for(d = 0; d < NUM_CPU; d++){
+                bmp |= (1<<cpu[d]);
+        }
+        assert(bmp == (1<<NUM_CPU)-1);
+        PRINTC("cycles=%d, rt=%lld", cos_hw_cycles_per_usec(BOOT_CAPTBL_SELF_INITHW_BASE), (end_rt - start_rt)/2100);
+        return 0;
 }
-
-void my_fn(int id){
-    int low = (60 * id)/NTHDS;
-    int high = (60 * (id+1))/NTHDS;
-    int i, j;
-    float sum;
-    while(low < high){
-        for(i = 0; i < 50; i++){
-            sum = 0;
-            for(j = 0; j < 100; j++){
-                sum += m1[low][j] * m2[j][i];
-            }
-            final[low][i] = sum;
-        }       
-        low += 1;
-    }
-    return;
-}
-
